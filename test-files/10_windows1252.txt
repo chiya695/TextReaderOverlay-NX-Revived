@@ -1,0 +1,6 @@
+TextReaderOverlay Windows-1252 test
+Cafe: café
+German: Größe
+Spanish: mañana
+Symbols: € © — …
+END

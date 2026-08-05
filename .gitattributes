@@ -1,0 +1,10 @@
+* text=auto
+*.md text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+Makefile text eol=lf
+*.cpp text eol=lf
+*.hpp text eol=lf
+
+# Encoding fixtures intentionally contain non-UTF-8/binary text.
+test-files/*.txt -diff

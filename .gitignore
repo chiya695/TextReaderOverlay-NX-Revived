@@ -1,0 +1,13 @@
+build/
+
+*.ovl
+*.elf
+*.nacp
+*.nro
+
+TextReaderOverlay-NX-*.zip
+TextReaderOverlay-NX-[0-9]*/
+TextReader-Encoding-Test-Pack.zip
+TextReader-Encoding-Test-Pack/
+
+.vscode/

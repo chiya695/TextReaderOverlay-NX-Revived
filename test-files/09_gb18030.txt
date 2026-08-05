@@ -1,0 +1,8 @@
+TextReaderOverlay encoding test
+ABC 123
+简体中文：月姬与琉璃之月
+繁體中文：測試文字
+日本語：テキスト表示
+한국어: 텍스트 표시
+Symbols: € © — …
+END

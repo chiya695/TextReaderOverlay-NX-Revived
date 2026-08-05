@@ -1,0 +1,65 @@
+﻿name: Bug report
+description: Report a crash, rendering issue, or file compatibility problem
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please reboot after replacing the OVL and confirm the issue still occurs before filing a report.
+  - type: input
+    id: atmosphere
+    attributes:
+      label: Atmosphere version
+      placeholder: "Example: 1.11.2"
+    validations:
+      required: true
+  - type: input
+    id: firmware
+    attributes:
+      label: Switch firmware version
+      placeholder: "Example: 22.5.0"
+    validations:
+      required: true
+  - type: input
+    id: tesla
+    attributes:
+      label: Tesla Menu / nx-ovlloader versions
+    validations:
+      required: true
+  - type: dropdown
+    id: encoding
+    attributes:
+      label: Text encoding
+      options:
+        - UTF-8
+        - UTF-8 with BOM
+        - UTF-16 LE/BE
+        - UTF-32 LE/BE
+        - GB18030/GBK
+        - Windows-1252
+        - Unknown
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include exact steps and what you expected to see.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Diagnostics and logs
+      description: Press Minus in the reader for version/encoding details. Attach Atmosphere crash reports if a crash occurred.
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission checks
+      options:
+        - label: I deleted/replaced the old OVL and rebooted the Switch.
+          required: true
+        - label: I tested with a small UTF-8 text file.
+          required: true
