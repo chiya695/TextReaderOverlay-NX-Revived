@@ -1,4 +1,6 @@
-﻿# Release notes 鈥?v1.8
+# Release notes — v1.8
+
+This release is part of a maintained compatibility fork of [diwo/TextReaderOverlay-NX](https://github.com/diwo/TextReaderOverlay-NX). The original overlay was a useful and focused project, but its old libnx/libtesla assumptions no longer worked reliably on current Atmosphere environments. This version was rebuilt and debugged on real hardware to preserve the original purpose while making it usable again.
 
 v1.8 is the first release intended as a clean daily-use build after the real-device debugging cycle.
 

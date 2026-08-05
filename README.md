@@ -1,10 +1,10 @@
-﻿# TextReaderOverlay-NX Revived
+# TextReaderOverlay-NX Revived
 
 A maintained compatibility fork of [diwo/TextReaderOverlay-NX](https://github.com/diwo/TextReaderOverlay-NX) for modern Nintendo Switch homebrew environments.
 
 TextReaderOverlay is a Tesla overlay that lets you browse `.txt` files on the SD card and read them over any foreground application. This fork keeps the original idea and interface, while updating the code for current Atmosphere/libnx/libtesla toolchains and fixing several failures found on real hardware.
 
-涓枃璇存槑锛歔README_zh-CN.md](README_zh-CN.md)
+中文说明：[README_zh-CN.md](README_zh-CN.md)
 
 ![TextReaderOverlay screenshot](res/TextReader.jpg)
 
