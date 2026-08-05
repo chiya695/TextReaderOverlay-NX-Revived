@@ -1,10 +1,10 @@
-# TextReaderOverlay-NX Revived
+﻿# TextReaderOverlay-NX Revived
 
 A maintained compatibility fork of [diwo/TextReaderOverlay-NX](https://github.com/diwo/TextReaderOverlay-NX) for modern Nintendo Switch homebrew environments.
 
 TextReaderOverlay is a Tesla overlay that lets you browse `.txt` files on the SD card and read them over any foreground application. This fork keeps the original idea and interface, while updating the code for current Atmosphere/libnx/libtesla toolchains and fixing several failures found on real hardware.
 
-中文说明：[README_zh-CN.md](README_zh-CN.md)
+涓枃璇存槑锛歔README_zh-CN.md](README_zh-CN.md)
 
 ![TextReaderOverlay screenshot](res/TextReader.jpg)
 
@@ -37,7 +37,7 @@ The release was tested on Atmosphere 1.11.2 / firmware 22.5.0. Other versions ma
 
 1. Install or update [nx-ovlloader](https://github.com/WerWolv/nx-ovlloader) on the SD card.
 2. Install or update [Tesla Menu](https://github.com/WerWolv/Tesla-Menu) on the SD card.
-3. Download the ZIP from the Releases page and extract it to the SD-card root.
+3. Download the ZIP from the [Releases page](https://github.com/chiya695/TextReaderOverlay-NX-Revived/releases/latest) and extract it to the SD-card root.
 4. Put `.txt` files anywhere on the SD card.
 5. Reboot the Switch after installing or replacing the overlay. This is recommended during development because a hidden/running overlay may still be resident in memory.
 6. Open Tesla Menu with `L + D-Pad Down + Right Stick Press`, then select `Text Reader`.

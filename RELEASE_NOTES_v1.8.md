@@ -1,4 +1,4 @@
-# Release notes — v1.8
+﻿# Release notes 鈥?v1.8
 
 v1.8 is the first release intended as a clean daily-use build after the real-device debugging cycle.
 
