@@ -5,7 +5,7 @@
 #include <MainMenu.hpp>
 
 #ifndef TEXT_READER_VERSION
-#define TEXT_READER_VERSION "v1.8"
+#define TEXT_READER_VERSION "v1.9"
 #endif
 
 class TextReaderOverlay : public tsl::Overlay {

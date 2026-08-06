@@ -15,4 +15,4 @@ export PKG_CONFIG_PATH=$PORTLIBS/switch/lib/pkgconfig
 make release
 ```
 
-The generated `TextReaderOverlay-NX-1.8.zip` contains the SD card layout. Keep `Atmosphere`, `nx-ovlloader`, and Tesla Menu updated together with the overlay.
+The generated `TextReaderOverlay-NX-1.9.zip` contains the SD card layout. Keep `Atmosphere`, `nx-ovlloader`, and Tesla Menu updated together with the overlay.

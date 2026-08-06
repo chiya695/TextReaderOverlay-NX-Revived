@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cctype>
 #include <cstdio>
 #include <limits>
 #include <vector>
@@ -379,6 +380,10 @@ TextReader::TextReader(std::string const &path)
       m_loaded(false),
       m_size(16),
       m_panx(0),
+      m_wordWrap(true),
+      m_wrapLine(0),
+      m_pendingVisualScroll(0),
+      m_wrapWidth(0),
       m_timePrev(std::chrono::steady_clock::now()),
       m_timeAggregate(0ms),
       m_timeTicks(0),
@@ -386,6 +391,7 @@ TextReader::TextReader(std::string const &path)
       m_debug(false)
 {
     auto j = Config::read();
+    m_wordWrap = j.value("settings", json::object()).value("word_wrap", true);
     auto resume = j["files"][m_path].find("resume");
     if (resume != j["files"][m_path].end())
         m_lineNum = *resume;
@@ -456,22 +462,49 @@ tsl::elm::Element* TextReader::createUI() {
         }
 
         const u32 numLinesToShow = (h - (textTop - y)) / std::max(1U, m_size) + 2;
-        for (u32 i = 0; i < numLinesToShow; ++i) {
-            const u32 absoluteLine = m_lineNum + i;
-            if (absoluteLine >= m_totalLines)
-                break;
+        if (m_wordWrap) {
+            const s32 maxWidth = std::max(1, w - 20);
+            if (m_wrapWidth != maxWidth) {
+                m_wrapWidth = maxWidth;
+                m_wrapCache.clear();
+            }
+            applyVisualScroll(renderer, maxWidth);
 
-            const u32 chunk = absoluteLine / TextReaderChunk::MAX_SIZE;
-            const u32 line = absoluteLine % TextReaderChunk::MAX_SIZE;
-            if (chunk >= m_chunks.size())
-                break;
+            u32 absoluteLine = m_lineNum;
+            u32 wrapLine = m_wrapLine;
+            for (u32 row = 0; row < numLinesToShow && absoluteLine < m_totalLines; ++row) {
+                const auto &segments = wrappedLine(absoluteLine, renderer, maxWidth);
+                if (wrapLine >= segments.size())
+                    wrapLine = static_cast<u32>(segments.size() - 1);
 
-            if (m_bookmarks.find(absoluteLine) != m_bookmarks.end())
-                renderer->drawRect(x, textTop + i * m_size, w, 1, a({ 0x6, 0x1, 0x1, 0xF }));
-            printLn(m_chunks[chunk].getLine(line),
-                    x + 10 + m_panx * static_cast<s32>(m_size),
-                    textTop + static_cast<s32>((i + 1) * m_size),
-                    m_size, renderer);
+                if (m_bookmarks.find(absoluteLine) != m_bookmarks.end())
+                    renderer->drawRect(x, textTop + row * m_size, w, 1, a({ 0x6, 0x1, 0x1, 0xF }));
+                printLn(segments[wrapLine], x + 10,
+                        textTop + static_cast<s32>((row + 1) * m_size), m_size, renderer);
+
+                if (++wrapLine >= segments.size()) {
+                    ++absoluteLine;
+                    wrapLine = 0;
+                }
+            }
+        } else {
+            for (u32 i = 0; i < numLinesToShow; ++i) {
+                const u32 absoluteLine = m_lineNum + i;
+                if (absoluteLine >= m_totalLines)
+                    break;
+
+                const u32 chunk = absoluteLine / TextReaderChunk::MAX_SIZE;
+                const u32 line = absoluteLine % TextReaderChunk::MAX_SIZE;
+                if (chunk >= m_chunks.size())
+                    break;
+
+                if (m_bookmarks.find(absoluteLine) != m_bookmarks.end())
+                    renderer->drawRect(x, textTop + i * m_size, w, 1, a({ 0x6, 0x1, 0x1, 0xF }));
+                printLn(m_chunks[chunk].getLine(line),
+                        x + 10 + m_panx * static_cast<s32>(m_size),
+                        textTop + static_cast<s32>((i + 1) * m_size),
+                        m_size, renderer);
+            }
         }
 
         const u32 progressY = m_lineNum * (tsl::cfg::FramebufferHeight - 20) / m_totalLines;
@@ -483,6 +516,169 @@ tsl::elm::Element* TextReader::createUI() {
     return drawer;
 }
 
+const std::vector<std::string>& TextReader::wrappedLine(u32 line, tsl::gfx::Renderer *renderer, s32 maxWidth) {
+    auto cached = m_wrapCache.find(line);
+    if (cached != m_wrapCache.end())
+        return cached->second;
+
+    const u32 chunk = line / TextReaderChunk::MAX_SIZE;
+    const u32 offset = line % TextReaderChunk::MAX_SIZE;
+    const std::string &text = m_chunks[chunk].getLine(offset);
+    struct Token {
+        std::string text;
+        u32 width;
+    };
+    std::vector<Token> tokens;
+
+    auto measure = [this, renderer](const std::string &value) -> u32 {
+        if (value.empty())
+            return 0;
+        return renderer->drawString(value.c_str(), false, 0, 0,
+                                    static_cast<float>(m_size), a(0x0000)).first;
+    };
+
+    size_t position = 0;
+    while (position < text.size()) {
+        const u8 first = static_cast<u8>(text[position]);
+        size_t length = 1;
+        if ((first & 0x80U) == 0)
+            length = 1;
+        else if ((first & 0xE0U) == 0xC0U)
+            length = 2;
+        else if ((first & 0xF0U) == 0xE0U)
+            length = 3;
+        else if ((first & 0xF8U) == 0xF0U)
+            length = 4;
+        if (position + length > text.size())
+            length = 1;
+
+        const bool ascii = first < 0x80U;
+        const bool whitespace = ascii && std::isspace(first) != 0;
+        if (whitespace) {
+            const size_t start = position;
+            while (position < text.size() && std::isspace(static_cast<u8>(text[position])) != 0)
+                ++position;
+            tokens.push_back({ text.substr(start, position - start), measure(text.substr(start, position - start)) });
+        } else if (ascii) {
+            const size_t start = position;
+            while (position < text.size()) {
+                const u8 value = static_cast<u8>(text[position]);
+                if (value >= 0x80U || std::isspace(value) != 0)
+                    break;
+                ++position;
+            }
+            const std::string token = text.substr(start, position - start);
+            tokens.push_back({ token, measure(token) });
+        } else {
+            const std::string token = text.substr(position, length);
+            tokens.push_back({ token, measure(token) });
+            position += length;
+        }
+    }
+
+    std::vector<std::string> segments;
+    std::string current;
+    u32 currentWidth = 0;
+    auto emit = [&]() {
+        if (!current.empty()) {
+            segments.push_back(current);
+            current.clear();
+            currentWidth = 0;
+        }
+    };
+
+    for (const Token &token : tokens) {
+        if (token.text.empty())
+            continue;
+        if (std::isspace(static_cast<u8>(token.text.front())) != 0) {
+            if (!current.empty() && currentWidth + token.width <= static_cast<u32>(maxWidth)) {
+                current += token.text;
+                currentWidth += token.width;
+            } else if (!current.empty()) {
+                emit();
+            }
+            continue;
+        }
+
+        if (token.width <= static_cast<u32>(maxWidth) &&
+            currentWidth + token.width <= static_cast<u32>(maxWidth)) {
+            current += token.text;
+            currentWidth += token.width;
+            continue;
+        }
+
+        if (!current.empty())
+            emit();
+        if (token.width <= static_cast<u32>(maxWidth)) {
+            current = token.text;
+            currentWidth = token.width;
+            continue;
+        }
+
+        size_t tokenPosition = 0;
+        while (tokenPosition < token.text.size()) {
+            const u8 first = static_cast<u8>(token.text[tokenPosition]);
+            size_t length = 1;
+            if ((first & 0xE0U) == 0xC0U)
+                length = 2;
+            else if ((first & 0xF0U) == 0xE0U)
+                length = 3;
+            else if ((first & 0xF8U) == 0xF0U)
+                length = 4;
+            if (tokenPosition + length > token.text.size())
+                length = 1;
+            const std::string character = token.text.substr(tokenPosition, length);
+            const u32 characterWidth = measure(character);
+            if (!current.empty() && currentWidth + characterWidth > static_cast<u32>(maxWidth))
+                emit();
+            current += character;
+            currentWidth += characterWidth;
+            tokenPosition += length;
+        }
+    }
+    emit();
+    if (segments.empty())
+        segments.emplace_back();
+
+    if (m_wrapCache.size() >= 512)
+        m_wrapCache.clear();
+    auto inserted = m_wrapCache.emplace(line, std::move(segments));
+    return inserted.first->second;
+}
+
+void TextReader::applyVisualScroll(tsl::gfx::Renderer *renderer, s32 maxWidth) {
+    if (m_totalLines == 0)
+        return;
+    if (m_wrapLine == std::numeric_limits<u32>::max()) {
+        const auto &segments = wrappedLine(m_lineNum, renderer, maxWidth);
+        m_wrapLine = static_cast<u32>(segments.size() - 1);
+    }
+    while (m_pendingVisualScroll > 0) {
+        const auto &segments = wrappedLine(m_lineNum, renderer, maxWidth);
+        if (m_wrapLine + 1 < segments.size()) {
+            ++m_wrapLine;
+        } else if (m_lineNum + 1 < m_totalLines) {
+            scrollLogical(1);
+            m_wrapLine = 0;
+        } else {
+            break;
+        }
+        --m_pendingVisualScroll;
+    }
+    while (m_pendingVisualScroll < 0) {
+        if (m_wrapLine > 0) {
+            --m_wrapLine;
+        } else if (m_lineNum > 0) {
+            scrollLogical(-1);
+            const auto &segments = wrappedLine(m_lineNum, renderer, maxWidth);
+            m_wrapLine = static_cast<u32>(segments.size() - 1);
+        } else {
+            break;
+        }
+        ++m_pendingVisualScroll;
+    }
+}
+
 void TextReader::printLn(std::string const &text, s32 x, s32 y, u32 fontSize, tsl::gfx::Renderer *renderer) const {
     if (text.empty())
         return;
@@ -492,7 +688,11 @@ void TextReader::printLn(std::string const &text, s32 x, s32 y, u32 fontSize, ts
 bool TextReader::handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &touchInput, HidAnalogStickState leftJoyStick, HidAnalogStickState rightJoyStick) {
     if (keysHeld & HidNpadButton_ZR) {
         if (keysHeld & HidNpadButton_StickLUp) scrollTo(0);
-        if (keysHeld & HidNpadButton_StickLDown) scrollTo(m_totalLines - 1);
+        if (keysHeld & HidNpadButton_StickLDown) {
+            scrollTo(m_totalLines - 1);
+            if (m_wordWrap)
+                m_wrapLine = std::numeric_limits<u32>::max();
+        }
         if (keysHeld & HidNpadButton_StickLLeft) scroll(-1000);
         if (keysHeld & HidNpadButton_StickLRight) scroll(1000);
     } else if (keysHeld & HidNpadButton_ZL) {
@@ -509,12 +709,20 @@ bool TextReader::handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &to
 
     if (keysHeld & HidNpadButton_StickRUp) scroll(-1);
     if (keysHeld & HidNpadButton_StickRDown) scroll(1);
-    if (keysHeld & HidNpadButton_StickRLeft) m_panx++;
-    if (keysHeld & HidNpadButton_StickRRight) m_panx--;
+    if (!m_wordWrap && (keysHeld & HidNpadButton_StickRLeft)) m_panx++;
+    if (!m_wordWrap && (keysHeld & HidNpadButton_StickRRight)) m_panx--;
     if (keysDown & HidNpadButton_StickR) m_panx = 0;
 
-    if ((keysDown & HidNpadButton_Up) && m_size < 48) m_size++;
-    if ((keysDown & HidNpadButton_Down) && m_size > 6) m_size--;
+    if ((keysDown & HidNpadButton_Up) && m_size < 48) {
+        m_size++;
+        m_wrapLine = 0;
+        m_wrapCache.clear();
+    }
+    if ((keysDown & HidNpadButton_Down) && m_size > 6) {
+        m_size--;
+        m_wrapLine = 0;
+        m_wrapCache.clear();
+    }
 
     if (keysDown & HidNpadButton_X) tsl::Overlay::get()->hide();
     if (keysDown & HidNpadButton_Y) toggleBookmark();
@@ -527,10 +735,20 @@ bool TextReader::handleInput(u64 keysDown, u64 keysHeld, const HidTouchState &to
 }
 
 void TextReader::scrollTo(u32 line) {
-    scroll(static_cast<s32>(line) - static_cast<s32>(m_lineNum));
+    m_pendingVisualScroll = 0;
+    scrollLogical(static_cast<s32>(line) - static_cast<s32>(m_lineNum));
+    m_wrapLine = 0;
 }
 
 void TextReader::scroll(s32 offset) {
+    if (m_wordWrap) {
+        m_pendingVisualScroll = std::clamp(m_pendingVisualScroll + offset, -10000, 10000);
+        return;
+    }
+    scrollLogical(offset);
+}
+
+void TextReader::scrollLogical(s32 offset) {
     if (m_totalLines == 0)
         return;
 

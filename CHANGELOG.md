@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9 - 2026-08-06
+
+- Added a Settings menu with a persistent `Automatic Line Wrapping` toggle.
+- Wrapped long logical lines into measured visual rows without loading the whole file into memory.
+- Kept horizontal panning available when wrapping is disabled.
+- Made font-size changes invalidate the wrapping cache so row boundaries stay correct.
+
+
 ## 1.8 - 2026-08-05
 
 - Fixed rendering beyond the detected end of a file.

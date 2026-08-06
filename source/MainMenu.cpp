@@ -4,6 +4,7 @@
 #include <FileSelect.hpp>
 #include <FavoritesMenu.hpp>
 #include <HelpMenu.hpp>
+#include <SettingsMenu.hpp>
 #include <LogMenu.hpp>
 
 tsl::elm::Element* MainMenu::createUI() {
@@ -29,6 +30,16 @@ tsl::elm::Element* MainMenu::createUI() {
         return false;
     });
     m_menuItems->addItem(fileSelect);
+
+    auto settings = new tsl::elm::ListItem("Settings...");
+    settings->setClickListener([](s64 keys) {
+        if (keys & HidNpadButton_A) {
+            tsl::changeTo<SettingsMenu>();
+            return true;
+        }
+        return false;
+    });
+    m_menuItems->addItem(settings);
 
     auto help = new tsl::elm::ListItem("Help");
     help->setClickListener([](s64 keys) {

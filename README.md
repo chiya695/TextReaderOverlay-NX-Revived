@@ -22,7 +22,8 @@ This fork was rebuilt and tested on real hardware rather than only adjusted unti
 - added streamed text decoding for UTF-8, UTF-16, UTF-32, GB18030/GBK, and Windows-1252;
 - used Nintendo's shared system fonts for Latin, Japanese, Simplified Chinese, Traditional Chinese, and Korean text;
 - stopped rendering past EOF, preventing unrelated heap data from appearing after short files;
-- fixed Help layout clipping on current libtesla.
+- fixed Help layout clipping on current libtesla;
+- added an optional automatic line-wrapping mode for long lines.
 
 ## Requirements
 
@@ -42,6 +43,7 @@ The release was tested on Atmosphere 1.11.2 / firmware 22.5.0. Other versions ma
 5. Reboot the Switch after installing or replacing the overlay. This is recommended during development because a hidden/running overlay may still be resident in memory.
 6. Open Tesla Menu with `L + D-Pad Down + Right Stick Press`, then select `Text Reader`.
 7. Choose `Browse...`, navigate to a text file, and press `A`.
+8. Open `Settings...` from the main menu to enable or disable automatic line wrapping.
 
 If a previous version is still loaded, delete `sd:/switch/.overlays/TextReaderOverlay-NX.ovl`, copy the new file again, and reboot before testing.
 
@@ -59,14 +61,18 @@ If a previous version is still loaded, delete `sd:/switch/.overlays/TextReaderOv
 - `ZL` + Left Stick: scroll faster
 - `ZR` + Left Stick: scroll much faster / jump to top or bottom
 - Right Stick Up/Down: fine scrolling
-- Right Stick Left/Right: pan horizontally
-- Right Stick Press: reset horizontal pan
+- Right Stick Left/Right: pan horizontally when automatic wrapping is disabled
+- Right Stick Press: reset horizontal pan when automatic wrapping is disabled
 - D-Pad Up/Down: adjust font size
 - `Y`: toggle bookmark
 - `L` / `R`: previous/next bookmark
 - `X`: hide the overlay
 - `B`: close the reader
 - `-`: toggle diagnostic information
+
+## Settings
+
+`Settings...` currently contains `Automatic Line Wrapping`. It is enabled by default and is intended for long lines: the reader breaks them into screen-width visual rows, so the full line can be read without repeated horizontal panning. When disabled, the original horizontal-panning behavior is retained. The setting is saved to the overlay configuration and takes effect the next time a file is opened.
 
 ## Text support
 

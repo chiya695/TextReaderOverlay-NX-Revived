@@ -5,6 +5,7 @@
 #include <chrono>
 #include <set>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 enum class TextEncoding {
@@ -70,6 +71,9 @@ protected:
     void printLn(std::string const &text, s32 x, s32 y, u32 fontSize, tsl::gfx::Renderer *renderer) const;
 
 private:
+    const std::vector<std::string>& wrappedLine(u32 line, tsl::gfx::Renderer *renderer, s32 maxWidth);
+    void applyVisualScroll(tsl::gfx::Renderer *renderer, s32 maxWidth);
+    void scrollLogical(s32 offset);
     void loadText(u32 chunk);
     void unloadText(u32 chunk);
 
@@ -87,6 +91,11 @@ private:
 
     u32 m_size;
     s32 m_panx;
+    bool m_wordWrap;
+    u32 m_wrapLine;
+    s32 m_pendingVisualScroll;
+    s32 m_wrapWidth;
+    std::unordered_map<u32, std::vector<std::string>> m_wrapCache;
     std::set<u32> m_bookmarks;
 
     std::chrono::steady_clock::time_point m_timePrev;
