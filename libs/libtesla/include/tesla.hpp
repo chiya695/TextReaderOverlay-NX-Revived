@@ -768,6 +768,8 @@ namespace tsl {
                 };
 
                 static std::unordered_map<u64, Glyph> s_glyphCache;
+                static size_t s_glyphCacheBytes = 0;
+                constexpr size_t GlyphCacheLimit = 512 * 1024;
 
                 do {
                     if (maxWidth > 0 && maxWidth < (currX - x))
@@ -796,20 +798,34 @@ namespace tsl {
 
                     auto it = s_glyphCache.find(key);
                     if (it == s_glyphCache.end()) {
-                        /* Cache glyph */
-                        glyph = &s_glyphCache.emplace(key, Glyph()).first->second;
+                        /* Build and cache glyph, keeping the cache bounded. */
+                        Glyph newGlyph{};
+                        newGlyph.currFont = this->fontForCodepoint(currCharacter);
+                        newGlyph.currFontSize = stbtt_ScaleForPixelHeight(newGlyph.currFont, fontSize);
 
-                        glyph->currFont = this->fontForCodepoint(currCharacter);
-
-                        glyph->currFontSize = stbtt_ScaleForPixelHeight(glyph->currFont, fontSize);
-
-                        stbtt_GetCodepointBitmapBoxSubpixel(glyph->currFont, currCharacter, glyph->currFontSize, glyph->currFontSize,
-                                                            0, 0, &glyph->bounds[0], &glyph->bounds[1], &glyph->bounds[2], &glyph->bounds[3]);
+                        stbtt_GetCodepointBitmapBoxSubpixel(newGlyph.currFont, currCharacter, newGlyph.currFontSize, newGlyph.currFontSize,
+                                                            0, 0, &newGlyph.bounds[0], &newGlyph.bounds[1], &newGlyph.bounds[2], &newGlyph.bounds[3]);
 
                         int yAdvance = 0;
-                        stbtt_GetCodepointHMetrics(glyph->currFont, monospace ? 'W' : currCharacter, &glyph->xAdvance, &yAdvance);
+                        stbtt_GetCodepointHMetrics(newGlyph.currFont, monospace ? 'W' : currCharacter, &newGlyph.xAdvance, &yAdvance);
+                        newGlyph.glyphBmp = stbtt_GetCodepointBitmap(newGlyph.currFont, newGlyph.currFontSize, newGlyph.currFontSize,
+                                                                      currCharacter, &newGlyph.width, &newGlyph.height, nullptr, nullptr);
 
-                        glyph->glyphBmp = stbtt_GetCodepointBitmap(glyph->currFont, glyph->currFontSize, glyph->currFontSize, currCharacter, &glyph->width, &glyph->height, nullptr, nullptr);
+                        const size_t bitmapBytes = newGlyph.glyphBmp != nullptr && newGlyph.width > 0 && newGlyph.height > 0
+                            ? static_cast<size_t>(newGlyph.width) * static_cast<size_t>(newGlyph.height)
+                            : 0;
+                        if (s_glyphCacheBytes + bitmapBytes > GlyphCacheLimit) {
+                            for (auto &entry : s_glyphCache) {
+                                if (entry.second.glyphBmp != nullptr)
+                                    stbtt_FreeBitmap(entry.second.glyphBmp, nullptr);
+                            }
+                            s_glyphCache.clear();
+                            s_glyphCacheBytes = 0;
+                        }
+
+                        auto inserted = s_glyphCache.emplace(key, std::move(newGlyph));
+                        glyph = &inserted.first->second;
+                        s_glyphCacheBytes += bitmapBytes;
                     } else {
                         /* Use cached glyph */
                         glyph = &it->second;

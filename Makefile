@@ -38,7 +38,7 @@ include $(DEVKITPRO)/libnx/switch_rules
 #   NACP building is skipped as well.
 #---------------------------------------------------------------------------------
 APP_TITLE	:=	Text Reader
-APP_VERSION	:=	1.9
+APP_VERSION	:=	1.9.1
 
 TARGET		:=	$(notdir $(CURDIR))
 BUILD		:=	build

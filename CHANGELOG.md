@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.9.1 - 2026-08-08
+
+- Bounded libtesla glyph bitmap caching to approximately 512 KiB.
+- Released cached glyph bitmaps before clearing the cache.
+- Fixed an ovlloader crash that could occur after increasing the font size while reading multilingual text.
+- Verified the fix on real Switch hardware with repeated font-size changes.
+
+
 ## 1.9 - 2026-08-06
 
 - Added a Settings menu with a persistent `Automatic Line Wrapping` toggle.

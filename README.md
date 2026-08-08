@@ -23,7 +23,8 @@ This fork was rebuilt and tested on real hardware rather than only adjusted unti
 - used Nintendo's shared system fonts for Latin, Japanese, Simplified Chinese, Traditional Chinese, and Korean text;
 - stopped rendering past EOF, preventing unrelated heap data from appearing after short files;
 - fixed Help layout clipping on current libtesla;
-- added an optional automatic line-wrapping mode for long lines.
+- added an optional automatic line-wrapping mode for long lines;
+- bounded the glyph bitmap cache to prevent crashes after repeated font-size changes.
 
 ## Requirements
 
